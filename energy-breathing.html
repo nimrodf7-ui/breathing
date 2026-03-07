@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="נשימה">
+<meta name="theme-color" content="#1a2e1f">
+<title>נשימה מכוונת</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Heebo:wght@200;300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a2e1f;
+    --surface: #22382a;
+    --surface2: #2a4535;
+    --green: #4caf7d;
+    --sky: #a8d5b5;
+    --white: #eef5f0;
+    --dim: #6a8f76;
+    --glow: rgba(76,175,125,0.3);
+    --exhale: #68c2a0;
+    --hold: #f0c060;
+    --red: #c0392b;
+    --sleep: #7b8fd4;
+    --sleep-glow: rgba(123,143,212,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Heebo', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    position: relative;
+  }
+
+  body::before {
+    content:'';
+    position:fixed;
+    width:400px; height:400px;
+    top:-150px; left:-100px;
+    background: radial-gradient(circle, rgba(76,175,125,0.07) 0%, transparent 70%);
+    pointer-events:none;
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    padding: 0 14px;
+    gap: 0;
+    /* fill height safely */
+    height: 100vh;
+    height: 100dvh;
+    justify-content: space-evenly;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Title ── */
+  .app-title {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:13px;
+    letter-spacing:0.28em;
+    color:var(--dim);
+  }
+
+  /* ── Session icons grid 4+3 ── */
+  .session-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+  }
+
+  .session-row {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .tab {
+    width: 68px;
+    height: 68px;
+    background: var(--surface);
+    border: 2px solid transparent;
+    border-radius: 18px;
+    color: var(--dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .tab .tab-icon { font-size: 22px; line-height: 1; }
+  .tab .tab-name {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--sky);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .tab.active {
+    border-color: var(--green);
+    background: var(--surface2);
+    box-shadow: 0 3px 14px rgba(76,175,125,0.25);
+  }
+  .tab.active .tab-name { color: var(--green); }
+
+  /* Sleep session active color */
+  .tab.active.sleep-tab {
+    border-color: var(--sleep);
+    box-shadow: 0 3px 14px rgba(123,143,212,0.3);
+  }
+  .tab.active.sleep-tab .tab-name { color: var(--sleep); }
+
+  /* Wim Hof level toggle */
+  .level-toggle {
+    display: none;
+    gap: 6px;
+    width: 100%;
+  }
+  .level-toggle.visible { display: flex; }
+  .level-btn {
+    flex: 1;
+    padding: 7px;
+    border: 2px solid var(--surface2);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--dim);
+    font-family: 'Heebo', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .level-btn.active { border-color: var(--green); color: var(--green); }
+
+  /* ── Circle ── */
+  .circle-wrap {
+    position: relative;
+    width: 170px;
+    height: 170px;
+    flex-shrink: 0;
+  }
+
+  .ring-svg { position:absolute; inset:0; transform:rotate(-90deg); }
+  .ring-bg { fill:none; stroke:var(--surface2); stroke-width:8; }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 452;
+    stroke-dashoffset: 452;
+    transition: stroke-dashoffset 0.1s linear, stroke 0.4s ease;
+    filter: drop-shadow(0 0 8px rgba(76,175,125,0.5));
+  }
+  .ring-progress.exhale { stroke:var(--exhale); filter:drop-shadow(0 0 8px rgba(104,194,160,0.5)); }
+  .ring-progress.hold   { stroke:var(--hold);   filter:drop-shadow(0 0 8px rgba(240,192,96,0.5)); }
+  .ring-progress.sleep  { stroke:var(--sleep);  filter:drop-shadow(0 0 8px rgba(123,143,212,0.5)); }
+
+  .circle-inner {
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border: 1px solid rgba(76,175,125,0.12);
+  }
+
+  .phase-label {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    color: var(--green);
+    transition: color 0.4s;
+    line-height: 1;
+  }
+  .phase-label.exhale { color: var(--exhale); }
+  .phase-label.hold   { color: var(--hold); }
+  .phase-label.sleep  { color: var(--sleep); }
+  .phase-label.paused { color: var(--dim); }
+
+  .countdown {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 52px;
+    line-height: 1;
+    color: var(--white);
+  }
+
+  .rep-counter {
+    font-size: 9px;
+    font-weight: 300;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Info strip ── */
+  .info-strip {
+    display: flex;
+    width: 100%;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(76,175,125,0.1);
+  }
+  .info-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 7px 4px;
+    gap: 1px;
+  }
+  .info-item:not(:last-child) { border-left: 1px solid rgba(76,175,125,0.1); }
+  .info-value {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 17px;
+    color: var(--green);
+    line-height: 1;
+  }
+  .info-key {
+    font-size: 7px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  /* ── Done ── */
+  .done-msg { display:none; flex-direction:column; align-items:center; gap:3px; text-align:center; }
+  .done-msg.show { display:flex; }
+  .done-big { font-family:'Bebas Neue', sans-serif; font-size:34px; color:var(--green); letter-spacing:0.1em; }
+  .done-sub { font-size:11px; color:var(--dim); font-weight:300; line-height:1.5; }
+
+  /* ── Buttons ── */
+  .btn-main {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.14em;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--green);
+    color: #0d1f12;
+    box-shadow: 0 4px 18px rgba(76,175,125,0.4);
+  }
+  .btn-main:active { transform: scale(0.97); }
+  .btn-main.running {
+    background: var(--red);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(192,57,43,0.4);
+  }
+  .btn-main.sleep-mode {
+    background: var(--sleep);
+    color: #0d0d1f;
+    box-shadow: 0 4px 18px var(--sleep-glow);
+  }
+
+  .btn-secondary-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    align-items: center;
+  }
+
+  .btn-pause {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid rgba(76,175,125,0.2);
+    border-radius: 12px;
+    background: var(--surface2);
+    color: var(--sky);
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .btn-pause.active { opacity:1; pointer-events:all; }
+  .btn-pause.active:active { transform:scale(0.97); }
+  .btn-pause.paused { color:var(--green); border-color:var(--green); background:rgba(76,175,125,0.08); opacity:1; pointer-events:all; }
+
+  .sound-row { display:flex; align-items:center; gap:6px; }
+  .sound-label { font-size:10px; color:var(--dim); font-weight:300; }
+  .sound-toggle {
+    width:36px; height:19px;
+    border-radius:10px;
+    background:var(--surface2);
+    border:none; cursor:pointer;
+    position:relative; transition:background 0.2s;
+  }
+  .sound-toggle.on { background:var(--green); }
+  .sound-toggle::after {
+    content:''; position:absolute;
+    top:3px; right:3px;
+    width:13px; height:13px;
+    border-radius:50%; background:#fff; transition:right 0.2s;
+  }
+  .sound-toggle.on::after { right:20px; }
+
+  /* Pulse */
+  @keyframes pulseGlow {
+    0%,100% { box-shadow:0 0 0 0 var(--glow); }
+    50%      { box-shadow:0 0 0 10px transparent; }
+  }
+  .circle-inner.pulsing { animation:pulseGlow 1.2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="app-title">🌿 נשימה מכוונת</div>
+
+  <!-- Session icons -->
+  <div class="session-grid">
+    <div class="session-row">
+      <button class="tab active" id="tab0" onclick="selectSession(0)">
+        <span class="tab-icon">☀️</span>
+        <span class="tab-name">צהריים</span>
+      </button>
+      <button class="tab" id="tab1" onclick="selectSession(1)">
+        <span class="tab-icon">⚡</span>
+        <span class="tab-name">16:00</span>
+      </button>
+      <button class="tab" id="tab2" onclick="selectSession(2)">
+        <span class="tab-icon">🛡️</span>
+        <span class="tab-name">חיסון</span>
+      </button>
+      <button class="tab" id="tab3" onclick="selectSession(3)">
+        <span class="tab-icon">💪</span>
+        <span class="tab-name">מניעה</span>
+      </button>
+    </div>
+    <div class="session-row">
+      <button class="tab" id="tab4" onclick="selectSession(4)">
+        <span class="tab-icon">🧠</span>
+        <span class="tab-name">פוקוס</span>
+      </button>
+      <button class="tab" id="tab5" onclick="selectSession(5)">
+        <span class="tab-icon">🫁</span>
+        <span class="tab-name">ריאות</span>
+      </button>
+      <button class="tab sleep-tab" id="tab6" onclick="selectSession(6)">
+        <span class="tab-icon">🌙</span>
+        <span class="tab-name">שינה</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Wim Hof level toggle -->
+  <div class="level-toggle" id="levelToggle">
+    <button class="level-btn active" id="lvl0" onclick="selectLevel(0)">🔥 קל — 15 שאיפות</button>
+    <button class="level-btn" id="lvl1" onclick="selectLevel(1)">🔥🔥 מלא — 20 שאיפות</button>
+  </div>
+
+  <!-- Circle -->
+  <div class="circle-wrap">
+    <svg class="ring-svg" viewBox="0 0 170 170">
+      <circle class="ring-bg" cx="85" cy="85" r="72"/>
+      <circle class="ring-progress" id="ring" cx="85" cy="85" r="72"/>
+    </svg>
+    <div class="circle-inner" id="circleInner">
+      <div class="phase-label" id="phaseLabel">מוכן</div>
+      <div class="countdown" id="countdown">—</div>
+      <div class="rep-counter" id="repCounter">בחר סדרה</div>
+    </div>
+  </div>
+
+  <!-- Info strip -->
+  <div class="info-strip">
+    <div class="info-item"><div class="info-value" id="infoInhale">5</div><div class="info-key">שאיפה</div></div>
+    <div class="info-item"><div class="info-value" id="infoHold">—</div><div class="info-key">עצירה</div></div>
+    <div class="info-item"><div class="info-value" id="infoExhale">3</div><div class="info-key">נשיפה</div></div>
+    <div class="info-item"><div class="info-value" id="infoReps">8</div><div class="info-key">חזרות</div></div>
+    <div class="info-item"><div class="info-value" id="infoTotal">64″</div><div class="info-key">סה״כ</div></div>
+  </div>
+
+  <!-- Done -->
+  <div class="done-msg" id="doneMsg">
+    <div class="done-big">✓ כל הכבוד!</div>
+    <div class="done-sub" id="doneSub"></div>
+  </div>
+
+  <!-- Main button -->
+  <button class="btn-main" id="startBtn" onclick="handleStart()">התחל</button>
+
+  <!-- Pause + sound -->
+  <div class="btn-secondary-row">
+    <button class="btn-pause" id="pauseBtn" onclick="handlePause()">⏸ השהה</button>
+    <div class="sound-row">
+      <span class="sound-label">סאונד</span>
+      <button class="sound-toggle on" id="soundToggle" onclick="toggleSound()"></button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Audio ──────────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let soundOn = true;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration) {
+  if (!soundOn) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e){}
+}
+
+function soundInhale() { playTone(528, 'sine', 0.5); }
+function soundHold()   { playTone(396, 'triangle', 0.35); }
+function soundExhale() { playTone(285, 'sine', 0.6); }
+function soundSleepInhale() { playTone(432, 'sine', 0.7); }
+function soundSleepExhale() { playTone(220, 'sine', 0.9); }
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('soundToggle').className = 'sound-toggle' + (soundOn ? ' on' : '');
+}
+
+// ── Sessions ──────────────────────────────────────────
+function buildSessions(wimLevel) {
+  const wimCount = wimLevel === 0 ? 15 : 20;
+  const wimHold  = wimLevel === 0 ? 15 : 20;
+  return [
+    { // 0 - צהריים
+      done: 'תרגיש את האנרגיה עוד שניות ספורות ☀️',
+      reps: 8, isSleep: false,
+      phases: [{type:'inhale',dur:5},{type:'exhale',dur:3}],
+      info: {inhale:5, hold:'—', exhale:3, reps:8, total:'64″'}
+    },
+    { // 1 - 16:00
+      done: 'מערכת העצבים מופעלת ⚡',
+      reps: 10, isSleep: false,
+      phases: [{type:'inhale',dur:6},{type:'exhale',dur:2}],
+      info: {inhale:6, hold:'—', exhale:2, reps:10, total:'80″'}
+    },
+    { // 2 - חיסון מחלה
+      done: 'הגוף מוכן להתמקד בריפוי 🛡️',
+      reps: 6, isSleep: false,
+      phases: [{type:'inhale',dur:4},{type:'hold',dur:4},{type:'exhale',dur:4},{type:'hold',dur:4}],
+      info: {inhale:4, hold:4, exhale:4, reps:6, total:'96″'}
+    },
+    { // 3 - מניעה Wim Hof
+      done: 'מערכת החיסון מופעלת 💪',
+      reps: 3, isSleep: false,
+      phases: [
+        {type:'wim_inhales', count:wimCount},
+        {type:'wim_hold_empty', dur:wimHold},
+        {type:'wim_hold_full', dur:10}
+      ],
+      info: {inhale:wimCount+'×', hold:wimHold+'″', exhale:'—', reps:3, total:'~4′'}
+    },
+    { // 4 - פוקוס
+      done: 'הראש צלול ומוכן לחשוב 🧠',
+      reps: 8, isSleep: false,
+      phases: [{type:'inhale',dur:4},{type:'hold',dur:8},{type:'exhale',dur:5}],
+      info: {inhale:4, hold:8, exhale:5, reps:8, total:'136″'}
+    },
+    { // 5 - ריאות
+      done: 'ריאות חזקות יותר, נשימה עמוקה יותר 🫁',
+      reps: 6, isSleep: false,
+      phases: [{type:'inhale3',dur:8},{type:'hold',dur:20},{type:'exhale',dur:8}],
+      info: {inhale:'8(3×)', hold:20, exhale:8, reps:6, total:'216″'}
+    },
+    { // 6 - שינה 4-7-8
+      done: 'לילה טוב — גוף ונפש רגועים 🌙',
+      reps: 8, isSleep: true,
+      phases: [{type:'sleep_inhale',dur:4},{type:'sleep_hold',dur:7},{type:'sleep_exhale',dur:8}],
+      info: {inhale:4, hold:7, exhale:8, reps:8, total:'152″'}
+    },
+  ];
+}
+
+// ── State ──────────────────────────────────────────────
+let sessions = buildSessions(0);
+let sessionIdx = 0;
+let wimLevel = 0;
+let running = false;
+let paused  = false;
+let intervalId = null;
+let repsDone = 0;
+let phaseQueue = [];
+let phaseQueueIdx = 0;
+let subPhase = null;
+let timeLeft = 0;
+let phaseDuration = 0;
+
+const CIRC = 2 * Math.PI * 72; // 452.4
+
+const ring        = document.getElementById('ring');
+const phaseLabel  = document.getElementById('phaseLabel');
+const countdown   = document.getElementById('countdown');
+const repCounter  = document.getElementById('repCounter');
+const startBtn    = document.getElementById('startBtn');
+const pauseBtn    = document.getElementById('pauseBtn');
+const circleInner = document.getElementById('circleInner');
+const doneMsg     = document.getElementById('doneMsg');
+const doneSub     = document.getElementById('doneSub');
+
+ring.style.strokeDasharray  = CIRC;
+ring.style.strokeDashoffset = CIRC;
+
+// ── Session selection ──────────────────────────────────
+function selectSession(idx) {
+  if (running || paused) stopTimer();
+  sessionIdx = idx;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.getElementById('levelToggle').className = 'level-toggle' + (idx===3 ? ' visible' : '');
+  const isSleep = sessions[idx].isSleep;
+  startBtn.className = 'btn-main' + (isSleep ? ' sleep-mode' : '');
+  updateInfoStrip();
+  resetDisplay();
+}
+
+function selectLevel(lvl) {
+  wimLevel = lvl;
+  sessions = buildSessions(lvl);
+  document.getElementById('lvl0').className = 'level-btn' + (lvl===0 ? ' active':'');
+  document.getElementById('lvl1').className = 'level-btn' + (lvl===1 ? ' active':'');
+  updateInfoStrip();
+}
+
+function updateInfoStrip() {
+  const i = sessions[sessionIdx].info;
+  document.getElementById('infoInhale').textContent = i.inhale;
+  document.getElementById('infoHold').textContent   = i.hold;
+  document.getElementById('infoExhale').textContent = i.exhale;
+  document.getElementById('infoReps').textContent   = i.reps;
+  document.getElementById('infoTotal').textContent  = i.total;
+}
+
+function resetDisplay() {
+  phaseLabel.textContent = 'מוכן';
+  phaseLabel.className = 'phase-label';
+  countdown.textContent = '—';
+  repCounter.textContent = 'בחר סדרה';
+  ring.style.strokeDashoffset = CIRC;
+  ring.className = 'ring-progress';
+  circleInner.classList.remove('pulsing');
+  doneMsg.classList.remove('show');
+  const isSleep = sessions[sessionIdx].isSleep;
+  startBtn.textContent = 'התחל';
+  startBtn.className = 'btn-main' + (isSleep ? ' sleep-mode' : '');
+  pauseBtn.className = 'btn-pause';
+}
+
+// ── Controls ──────────────────────────────────────────
+function handleStart() {
+  if (running) stopTimer(); else startTimer();
+}
+function handlePause() {
+  if (!running && !paused) return;
+  paused ? resumeTimer() : pauseTimer();
+}
+
+function startTimer() {
+  running = true; paused = false; repsDone = 0;
+  doneMsg.classList.remove('show');
+  startBtn.textContent = 'עצור';
+  startBtn.className = 'btn-main running';
+  pauseBtn.className = 'btn-pause active';
+  pauseBtn.textContent = '⏸ השהה';
+  startRep();
+}
+
+function pauseTimer() {
+  paused = true; clearInterval(intervalId);
+  phaseLabel.textContent = 'השהיה';
+  phaseLabel.className = 'phase-label paused';
+  circleInner.classList.remove('pulsing');
+  pauseBtn.textContent = '▶ המשך';
+  pauseBtn.className = 'btn-pause paused';
+}
+
+function resumeTimer() {
+  paused = false;
+  pauseBtn.textContent = '⏸ השהה';
+  pauseBtn.className = 'btn-pause active';
+  if (subPhase) applyStyle(subPhase);
+  runInterval();
+}
+
+function stopTimer() {
+  running = false; paused = false;
+  clearInterval(intervalId);
+  resetDisplay();
+}
+
+// ── Execution ──────────────────────────────────────────
+function startRep() {
+  phaseQueue = [...sessions[sessionIdx].phases];
+  phaseQueueIdx = 0;
+  repCounter.textContent = `חזרה ${repsDone+1} / ${sessions[sessionIdx].reps}`;
+  runNextPhase();
+}
+
+function runNextPhase() {
+  if (!running || paused) return;
+  if (phaseQueueIdx >= phaseQueue.length) {
+    repsDone++;
+    const s = sessions[sessionIdx];
+    if (repsDone >= s.reps) { finishSession(); return; }
+    repCounter.textContent = `חזרה ${repsDone+1} / ${s.reps}`;
+    phaseQueue = [...s.phases];
+    phaseQueueIdx = 0;
+  }
+  executePhase(phaseQueue[phaseQueueIdx++]);
+}
+
+function executePhase(p) {
+  if (p.type === 'wim_inhales') {
+    runWimInhales(p.count, 0);
+  } else if (p.type === 'inhale3') {
+    runInhale3();
+  } else {
+    applyStyle(p.type);
+    playSoundFor(p.type);
+    subPhase = p.type;
+    phaseDuration = p.dur;
+    timeLeft = p.dur;
+    ring.style.strokeDashoffset = CIRC;
+    clearInterval(intervalId);
+    runInterval();
+  }
+}
+
+function playSoundFor(type) {
+  if (type === 'inhale')        soundInhale();
+  else if (type === 'exhale')   soundExhale();
+  else if (type === 'sleep_inhale') soundSleepInhale();
+  else if (type === 'sleep_exhale') soundSleepExhale();
+  else if (type.includes('hold') || type.includes('Hold')) soundHold();
+}
+
+function applyStyle(type) {
+  circleInner.classList.remove('pulsing');
+  const isSleep = sessions[sessionIdx].isSleep;
+  const ringBase = 'ring-progress';
+  switch(type) {
+    case 'inhale':
+      phaseLabel.textContent='שאיפה'; phaseLabel.className='phase-label';
+      ring.className=ringBase; circleInner.classList.add('pulsing'); break;
+    case 'exhale':
+      phaseLabel.textContent='נשיפה'; phaseLabel.className='phase-label exhale';
+      ring.className=ringBase+' exhale'; break;
+    case 'hold': case 'wim_hold_empty': case 'wim_hold_full':
+      phaseLabel.textContent = type==='wim_hold_empty' ? 'ריאות ריקות' : type==='wim_hold_full' ? 'ריאות מלאות' : 'עצור';
+      phaseLabel.className='phase-label hold'; ring.className=ringBase+' hold'; break;
+    case 'sleep_inhale':
+      phaseLabel.textContent='שאיפה'; phaseLabel.className='phase-label sleep';
+      ring.className=ringBase+' sleep'; circleInner.classList.add('pulsing'); break;
+    case 'sleep_hold':
+      phaseLabel.textContent='עצור'; phaseLabel.className='phase-label sleep';
+      ring.className=ringBase+' sleep'; break;
+    case 'sleep_exhale':
+      phaseLabel.textContent='נשיפה'; phaseLabel.className='phase-label sleep';
+      ring.className=ringBase+' sleep'; break;
+    case 'wim_inhale':
+      phaseLabel.textContent='שאיפה מהירה'; phaseLabel.className='phase-label';
+      ring.className=ringBase; circleInner.classList.add('pulsing'); break;
+  }
+}
+
+function runInterval() {
+  intervalId = setInterval(() => {
+    timeLeft -= 0.1;
+    countdown.textContent = Math.ceil(timeLeft);
+    ring.style.strokeDashoffset = CIRC * (timeLeft / phaseDuration);
+    if (timeLeft <= 0.05) { clearInterval(intervalId); runNextPhase(); }
+  }, 100);
+}
+
+function runWimInhales(total, current) {
+  if (!running || paused) { subPhase = 'wim_inhale'; return; }
+  if (current >= total) { runNextPhase(); return; }
+  subPhase = 'wim_inhale';
+  applyStyle('wim_inhale');
+  countdown.textContent = total - current;
+  repCounter.textContent = `שאיפה ${current+1} / ${total}`;
+  soundInhale();
+  phaseDuration = 1.2; timeLeft = 1.2;
+  ring.style.strokeDashoffset = CIRC;
+  clearInterval(intervalId);
+  intervalId = setInterval(() => {
+    timeLeft -= 0.1;
+    ring.style.strokeDashoffset = CIRC * (timeLeft / phaseDuration);
+    if (timeLeft <= 0.05) { clearInterval(intervalId); runWimInhales(total, current+1); }
+  }, 100);
+}
+
+function runInhale3() {
+  const parts = [{label:'שאיפה — בטן',dur:3},{label:'שאיפה — חזה',dur:3},{label:'שאיפה — כתפיים',dur:2}];
+  let idx = 0;
+  applyStyle('inhale'); soundInhale();
+  function runPart() {
+    if (!running || paused) return;
+    if (idx >= parts.length) { runNextPhase(); return; }
+    const p = parts[idx++];
+    phaseLabel.textContent = p.label;
+    phaseDuration = p.dur; timeLeft = p.dur;
+    ring.style.strokeDashoffset = CIRC;
+    clearInterval(intervalId);
+    intervalId = setInterval(() => {
+      timeLeft -= 0.1;
+      countdown.textContent = Math.ceil(timeLeft);
+      ring.style.strokeDashoffset = CIRC * (timeLeft / phaseDuration);
+      if (timeLeft <= 0.05) { clearInterval(intervalId); runPart(); }
+    }, 100);
+  }
+  runPart();
+}
+
+function finishSession() {
+  running = false; paused = false;
+  clearInterval(intervalId);
+  const s = sessions[sessionIdx];
+  phaseLabel.textContent = 'סיום'; phaseLabel.className = 'phase-label';
+  countdown.textContent = '✓';
+  circleInner.classList.remove('pulsing');
+  ring.style.strokeDashoffset = 0;
+  repCounter.textContent = `${s.reps}/${s.reps} חזרות`;
+  doneSub.textContent = s.done;
+  doneMsg.classList.add('show');
+  startBtn.textContent = 'שוב';
+  startBtn.className = 'btn-main' + (s.isSleep ? ' sleep-mode' : '');
+  pauseBtn.className = 'btn-pause';
+}
+
+// unlock audio
+document.addEventListener('touchstart', ()=>{ try{getAudioCtx();}catch(e){} }, {once:true});
+document.addEventListener('click',      ()=>{ try{getAudioCtx();}catch(e){} }, {once:true});
+
+updateInfoStrip();
+</script>
+</body>
+</html>
